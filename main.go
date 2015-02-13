@@ -32,7 +32,7 @@ func main() {
 	owner := "docker-library"
 	repository := "official-images"
 
-	err := labelPullsInRepo(ghClient, owner, repository, "all", "library/")
+	err := labelPullsInRepo(ghClient, owner, repository, "open", "library/")
 	if err != nil {
 		fmt.Printf("%v", err)
 		return
