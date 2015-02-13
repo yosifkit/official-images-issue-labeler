@@ -51,13 +51,12 @@ func main() {
 
 		labels := []string{}
 		for _, commitFile := range commitFiles {
-			// fmt.Printf("%s, %s: %v\n", *pr.URL, *commitFile.Filename, commitFile)
-			// fmt.Printf("PR: %s, %s\n", *pr.URL, *commitFile.Filename)
 			if strings.HasPrefix(*commitFile.Filename, "library/") {
 				labels = append(labels, *commitFile.Filename)
 			}
 		}
 		fmt.Printf("%d: %v\n", *pr.Number, labels)
+
 		// add labels
 		labelObjs, _, err := ghClient.Issues.AddLabelsToIssue(owner, repository, *pr.Number, labels)
 		if err != nil {
