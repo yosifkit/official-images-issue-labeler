@@ -32,14 +32,23 @@ func main() {
 	owner := "docker-library"
 	repository := "official-images"
 
+	err := labelPullsInRepo(ghClient, owner, repository, "all", "library/")
+	if err != nil {
+		fmt.Printf("%v", err)
+		return
+	}
+
+	return
+}
+
+func labelPullsInRepo(ghClient *github.Client, owner string, repository string, state string, filePrefix string) error {
 	options := &github.PullRequestListOptions{
-		State: "all",
+		State: state,
 	}
 
 	pulls, _, err := ghClient.PullRequests.List(owner, repository, options)
 	if err != nil {
-		fmt.Printf("%v", err)
-		return
+		return err
 	}
 
 	for _, pr := range pulls {
@@ -51,7 +60,7 @@ func main() {
 
 		labels := []string{}
 		for _, commitFile := range commitFiles {
-			if strings.HasPrefix(*commitFile.Filename, "library/") {
+			if strings.HasPrefix(*commitFile.Filename, filePrefix) {
 				labels = append(labels, *commitFile.Filename)
 			}
 		}
@@ -66,5 +75,5 @@ func main() {
 		fmt.Printf("%v\n", labelObjs)
 	}
 
-	return
+	return nil
 }
