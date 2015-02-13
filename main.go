@@ -32,7 +32,11 @@ func main() {
 	owner := "docker-library"
 	repository := "official-images"
 
-	pulls, _, err := ghClient.PullRequests.List(owner,repository, nil)
+	options := &github.PullRequestListOptions{
+		State: "all",
+	}
+
+	pulls, _, err := ghClient.PullRequests.List(owner, repository, options)
 	if err != nil {
 		fmt.Printf("%v", err)
 		return
