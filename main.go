@@ -62,21 +62,52 @@ func labelPullsInRepo(ghClient *github.Client, owner string, repository string, 
 				continue
 			}
 
+			currentLabels := []github.Label{}
+			opt := &github.ListOptions{
+				PerPage: 100,
+			}
+			for {
+				lbls, pages, err := ghClient.Issues.ListLabelsByIssue(owner, repository, *pr.Number, opt)
+				if err != nil {
+					fmt.Printf("%v", err)
+					break
+				}
+
+				currentLabels = append(currentLabels, lbls...)
+
+				if pages.NextPage == 0 {
+					break
+				}
+				opt.Page = pages.NextPage
+			}
+
 			labels := []string{}
 			for _, commitFile := range commitFiles {
 				if strings.HasPrefix(*commitFile.Filename, filePrefix) {
-					labels = append(labels, *commitFile.Filename)
+					valid := true
+					toAdd := *commitFile.Filename
+					for _, lbl := range currentLabels {
+						if lbl.String() == toAdd {
+							valid = false
+							break
+						}
+					}
+					if valid {
+						labels = append(labels, toAdd)
+					}
 				}
 			}
-			fmt.Printf("%d: %v\n", *pr.Number, labels)
+			fmt.Printf("%d:\n\tnew:%v\n\tcurrent:%v\n", *pr.Number, labels, currentLabels)
 
 			// add labels
-			labelObjs, _, err := ghClient.Issues.AddLabelsToIssue(owner, repository, *pr.Number, labels)
-			if err != nil {
-				fmt.Printf("%v", err)
-				continue
+			if len(labels) > 0 {
+				labelObjs, _, err := ghClient.Issues.AddLabelsToIssue(owner, repository, *pr.Number, labels)
+				if err != nil {
+					fmt.Printf("%v", err)
+					continue
+				}
+				fmt.Printf("\tresult:%v\n", labelObjs)
 			}
-			fmt.Printf("%v\n", labelObjs)
 		}
 
 		if resp.NextPage == 0 {
