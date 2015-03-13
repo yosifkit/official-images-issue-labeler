@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
+	"golang.org/x/net/context"
 	"os"
 	"strings"
 )
@@ -22,7 +23,7 @@ func main() {
 		return
 	}
 
-	var NoContext oauth2.Context = nil
+	var NoContext context.Context = context.TODO()
 	src := source{
 		myToken: &oauth2.Token{AccessToken: os.Args[1]},
 	}
