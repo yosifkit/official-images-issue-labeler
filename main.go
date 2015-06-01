@@ -19,7 +19,7 @@ func (t source) Token() (*oauth2.Token, error) {
 
 func main() {
 	if len(os.Args) != 2 {
-		fmt.Printf("missing github access token as avg 1\n")
+		fmt.Printf("missing github access token as arg 1\n")
 		return
 	}
 
