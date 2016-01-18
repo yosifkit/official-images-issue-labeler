@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/google/go-github/github"
-	"golang.org/x/oauth2"
-	"golang.org/x/net/context"
 	"os"
 	"strings"
+
+	"github.com/google/go-github/github"
+	"golang.org/x/net/context"
+	"golang.org/x/oauth2"
 )
 
 type source struct {
