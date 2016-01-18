@@ -35,7 +35,7 @@ func main() {
 
 	err := labelPullsInRepo(ghClient, owner, repository, "open", "library/")
 	if err != nil {
-		fmt.Printf("%v", err)
+		fmt.Printf("error: %v\n", err)
 		return
 	}
 
@@ -59,7 +59,7 @@ func labelPullsInRepo(ghClient *github.Client, owner string, repository string, 
 		for _, pr := range pulls {
 			commitFiles, _, err := ghClient.PullRequests.ListFiles(owner, repository, *pr.Number, nil)
 			if err != nil {
-				fmt.Printf("%v", err)
+				fmt.Printf("pr.ListFiles(%d) error: %v\n", *pr.Number, err)
 				continue
 			}
 
@@ -70,7 +70,7 @@ func labelPullsInRepo(ghClient *github.Client, owner string, repository string, 
 			for {
 				lbls, pages, err := ghClient.Issues.ListLabelsByIssue(owner, repository, *pr.Number, opt)
 				if err != nil {
-					fmt.Printf("%v", err)
+					fmt.Printf("pr.ListLabels(%d) error: %v\n", *pr.Number, err)
 					break
 				}
 
@@ -104,7 +104,7 @@ func labelPullsInRepo(ghClient *github.Client, owner string, repository string, 
 			if len(labels) > 0 {
 				labelObjs, _, err := ghClient.Issues.AddLabelsToIssue(owner, repository, *pr.Number, labels)
 				if err != nil {
-					fmt.Printf("%v", err)
+					fmt.Printf("pr.AddLabels(%d, %v) error: %v\n", *pr.Number, labels, err)
 					continue
 				}
 				fmt.Printf("\tresult:%v\n", labelObjs)
