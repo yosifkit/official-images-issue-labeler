@@ -43,6 +43,8 @@ func main() {
 	return
 }
 
+const defaultTries = 3
+
 func labelPullsInRepo(ghClient *github.Client, owner string, repository string, state string, filePrefix string) error {
 	options := &github.PullRequestListOptions{
 		State: state,
@@ -57,6 +59,7 @@ func labelPullsInRepo(ghClient *github.Client, owner string, repository string, 
 			return err
 		}
 
+	NextPull:
 		for _, pr := range pulls {
 			commitFiles, _, err := ghClient.PullRequests.ListFiles(owner, repository, *pr.Number, nil)
 			if err != nil {
@@ -68,11 +71,16 @@ func labelPullsInRepo(ghClient *github.Client, owner string, repository string, 
 			opt := &github.ListOptions{
 				PerPage: 100,
 			}
+			tries := defaultTries
 			for {
 				lbls, pages, err := ghClient.Issues.ListLabelsByIssue(owner, repository, *pr.Number, opt)
 				if err != nil {
 					fmt.Printf("pr.ListLabels(%d) error: %v\n", *pr.Number, err)
-					break
+					tries--
+					if tries <= 0 {
+						continue NextPull
+					}
+					continue
 				}
 
 				currentLabels = append(currentLabels, lbls...)
@@ -80,7 +88,9 @@ func labelPullsInRepo(ghClient *github.Client, owner string, repository string, 
 				if pages.NextPage == 0 {
 					break
 				}
+
 				opt.Page = pages.NextPage
+				tries = defaultTries
 			}
 
 			labels := []string{}
