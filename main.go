@@ -6,41 +6,49 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
+	"github.com/jessevdk/go-flags"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 )
 
-type source struct {
-	myToken *oauth2.Token
+type labelerFlags struct {
+	GhToken string `long:"token" required:"true" description:"GitHub API access token" value-name:"deadbeef"`
+	Owner   string `long:"owner" default:"docker-library" value-name:"docker-library"`
+	Repo    string `long:"repo" default:"official-images" value-name:"official-images"`
+	State   string `long:"state" default:"open" choice:"open" choice:"closed" choice:"all"`
 }
 
-func (t source) Token() (*oauth2.Token, error) {
-	return t.myToken, nil
+func (f labelerFlags) Token() (*oauth2.Token, error) {
+	return &oauth2.Token{AccessToken: f.GhToken}, nil
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Printf("missing github access token as arg 1\n")
-		return
-	}
+	opts := labelerFlags{}
+	flagParser := flags.NewParser(&opts, flags.Default)
 
-	var NoContext context.Context = context.TODO()
-	src := source{
-		myToken: &oauth2.Token{AccessToken: os.Args[1]},
-	}
-
-	client := oauth2.NewClient(NoContext, src)
-	ghClient := github.NewClient(client)
-	owner := "docker-library"
-	repository := "official-images"
-
-	err := labelPullsInRepo(ghClient, owner, repository, "open", "library/")
+	args, err := flagParser.Parse()
 	if err != nil {
-		fmt.Printf("error: %v\n", err)
-		return
+		if flagsErr, ok := err.(*flags.Error); ok {
+			if flagsErr.Type == flags.ErrHelp {
+				return
+			}
+		}
+		os.Exit(1)
+	}
+	if len(args) > 0 {
+		fmt.Fprintf(os.Stderr, "error: unexpected arguments: %s\n\n", strings.Join(args, " "))
+		flagParser.WriteHelp(os.Stderr)
+		os.Exit(1)
 	}
 
-	return
+	oauthContext := context.TODO()                      // "The returned client is not valid beyond the lifetime of the context."
+	oauthClient := oauth2.NewClient(oauthContext, opts) // https://godoc.org/golang.org/x/oauth2#NewClient
+	ghClient := github.NewClient(oauthClient)
+
+	if err := labelPullsInRepo(ghClient, opts.Owner, opts.Repo, opts.State, "library/"); err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 const defaultTries = 3
