@@ -4,6 +4,14 @@ WORKDIR /go/src/app
 COPY *.go ./
 
 RUN go-wrapper download
-RUN go-wrapper install
+RUN set -x \
+	&& go-wrapper install \
+	&& ! app \
+	&& ! app bogus \
+	&& ! app --bogus \
+	&& ! app --token bogus bogus \
+	&& ! app --token bogus --bogus \
+	&& app --help \
+	&& app -h
 
 ENTRYPOINT ["app"]
