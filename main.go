@@ -62,6 +62,7 @@ func labelPullsInRepo(ghClient *github.Client, owner string, repository string, 
 	}
 
 	for {
+		// TODO pagination
 		pulls, resp, err := ghClient.PullRequests.List(owner, repository, options)
 		if err != nil {
 			return err
@@ -69,6 +70,7 @@ func labelPullsInRepo(ghClient *github.Client, owner string, repository string, 
 
 	NextPull:
 		for _, pr := range pulls {
+			// TODO pagination
 			commitFiles, _, err := ghClient.PullRequests.ListFiles(owner, repository, *pr.Number, nil)
 			if err != nil {
 				fmt.Printf("pr.ListFiles(%d) error: %v\n", *pr.Number, err)
@@ -121,6 +123,7 @@ func labelPullsInRepo(ghClient *github.Client, owner string, repository string, 
 
 			// add labels
 			if len(labels) > 0 {
+				// TODO retry on fail?
 				labelObjs, _, err := ghClient.Issues.AddLabelsToIssue(owner, repository, *pr.Number, labels)
 				if err != nil {
 					fmt.Printf("pr.AddLabels(%d, %v) error: %v\n", *pr.Number, labels, err)
