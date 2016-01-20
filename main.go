@@ -53,91 +53,140 @@ func main() {
 
 const defaultTries = 3
 
-func labelPullsInRepo(ghClient *github.Client, owner string, repository string, state string, filePrefix string) error {
+func listPulls(ghClient *github.Client, owner string, repository string, state string) ([]github.PullRequest, error) {
 	options := &github.PullRequestListOptions{
 		State: state,
 		ListOptions: github.ListOptions{
 			PerPage: 100,
 		},
 	}
-
+	allPulls := []github.PullRequest{}
+	tries := defaultTries
 	for {
-		// TODO pagination
 		pulls, resp, err := ghClient.PullRequests.List(owner, repository, options)
 		if err != nil {
-			return err
+			tries--
+			if tries <= 0 {
+				return nil, err
+			}
+			continue
+		}
+		allPulls = append(allPulls, pulls...)
+		if resp.NextPage == 0 {
+			break
+		}
+		options.Page = resp.NextPage
+		tries = defaultTries
+	}
+	return allPulls, nil
+}
+
+func listFiles(ghClient *github.Client, owner string, repository string, pr github.PullRequest) ([]github.CommitFile, error) {
+	options := &github.ListOptions{
+		PerPage: 100,
+	}
+	allFiles := []github.CommitFile{}
+	tries := defaultTries
+	for {
+		files, resp, err := ghClient.PullRequests.ListFiles(owner, repository, *pr.Number, options)
+		if err != nil {
+			tries--
+			if tries <= 0 {
+				return nil, err
+			}
+			continue
+		}
+		allFiles = append(allFiles, files...)
+		if resp.NextPage == 0 {
+			break
+		}
+		options.Page = resp.NextPage
+		tries = defaultTries
+	}
+	return allFiles, nil
+}
+
+func listLabels(ghClient *github.Client, owner string, repository string, pr github.PullRequest) ([]github.Label, error) {
+	options := &github.ListOptions{
+		PerPage: 100,
+	}
+	allLabels := []github.Label{}
+	tries := defaultTries
+	for {
+		files, resp, err := ghClient.Issues.ListLabelsByIssue(owner, repository, *pr.Number, options)
+		if err != nil {
+			tries--
+			if tries <= 0 {
+				return nil, err
+			}
+			continue
+		}
+		allLabels = append(allLabels, files...)
+		if resp.NextPage == 0 {
+			break
+		}
+		options.Page = resp.NextPage
+		tries = defaultTries
+	}
+	return allLabels, nil
+}
+
+func labelPullsInRepo(ghClient *github.Client, owner string, repository string, state string, filePrefix string) error {
+	pulls, err := listPulls(ghClient, owner, repository, state)
+	if err != nil {
+		return err
+	}
+
+NextPull:
+	for _, pr := range pulls {
+		commitFiles, err := listFiles(ghClient, owner, repository, pr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error in ListFiles(%d): %v\n", *pr.Number, err)
+			continue
 		}
 
-	NextPull:
-		for _, pr := range pulls {
-			// TODO pagination
-			commitFiles, _, err := ghClient.PullRequests.ListFiles(owner, repository, *pr.Number, nil)
-			if err != nil {
-				fmt.Printf("pr.ListFiles(%d) error: %v\n", *pr.Number, err)
-				continue
-			}
+		currentLabels, err := listLabels(ghClient, owner, repository, pr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error in ListLabels(%d): %v\n", *pr.Number, err)
+			continue
+		}
 
-			currentLabels := []github.Label{}
-			opt := &github.ListOptions{
-				PerPage: 100,
+		labels := []string{}
+
+	NextFile:
+		for _, commitFile := range commitFiles {
+			if strings.HasPrefix(*commitFile.Filename, filePrefix) {
+				toAdd := *commitFile.Filename
+				for _, lbl := range currentLabels {
+					if lbl.String() == toAdd {
+						continue NextFile
+					}
+				}
+				labels = append(labels, toAdd)
 			}
+		}
+
+		fmt.Printf("\nhttps://github.com/%s/%s/pull/%d\n\tnew:%v\n\tcurrent:%v\n", owner, repository, *pr.Number, labels, currentLabels)
+
+		if len(labels) > 0 {
 			tries := defaultTries
 			for {
-				lbls, pages, err := ghClient.Issues.ListLabelsByIssue(owner, repository, *pr.Number, opt)
+				labelObjs, _, err := ghClient.Issues.AddLabelsToIssue(owner, repository, *pr.Number, labels)
 				if err != nil {
-					fmt.Printf("pr.ListLabels(%d) error: %v\n", *pr.Number, err)
 					tries--
 					if tries <= 0 {
+						fmt.Fprintf(os.Stderr, "error in AddLabels(%d, %v): %v\n", *pr.Number, labels, err)
 						continue NextPull
 					}
 					continue
 				}
-
-				currentLabels = append(currentLabels, lbls...)
-
-				if pages.NextPage == 0 {
-					break
-				}
-
-				opt.Page = pages.NextPage
-				tries = defaultTries
-			}
-
-			labels := []string{}
-			for _, commitFile := range commitFiles {
-				if strings.HasPrefix(*commitFile.Filename, filePrefix) {
-					valid := true
-					toAdd := *commitFile.Filename
-					for _, lbl := range currentLabels {
-						if lbl.String() == toAdd {
-							valid = false
-							break
-						}
-					}
-					if valid {
-						labels = append(labels, toAdd)
-					}
-				}
-			}
-			fmt.Printf("%d:\n\tnew:%v\n\tcurrent:%v\n", *pr.Number, labels, currentLabels)
-
-			// add labels
-			if len(labels) > 0 {
-				// TODO retry on fail?
-				labelObjs, _, err := ghClient.Issues.AddLabelsToIssue(owner, repository, *pr.Number, labels)
-				if err != nil {
-					fmt.Printf("pr.AddLabels(%d, %v) error: %v\n", *pr.Number, labels, err)
-					continue
-				}
 				fmt.Printf("\tresult:%v\n", labelObjs)
+				break
 			}
 		}
-
-		if resp.NextPage == 0 {
-			break
-		}
-		options.ListOptions.Page = resp.NextPage
 	}
+
+	fmt.Printf("\n")
 
 	return nil
 }
