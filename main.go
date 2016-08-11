@@ -53,14 +53,14 @@ func main() {
 
 const defaultTries = 3
 
-func listPulls(ghClient *github.Client, owner string, repository string, state string) ([]github.PullRequest, error) {
+func listPulls(ghClient *github.Client, owner string, repository string, state string) ([]*github.PullRequest, error) {
 	options := &github.PullRequestListOptions{
 		State: state,
 		ListOptions: github.ListOptions{
 			PerPage: 100,
 		},
 	}
-	allPulls := []github.PullRequest{}
+	allPulls := []*github.PullRequest{}
 	tries := defaultTries
 	for {
 		pulls, resp, err := ghClient.PullRequests.List(owner, repository, options)
@@ -81,11 +81,11 @@ func listPulls(ghClient *github.Client, owner string, repository string, state s
 	return allPulls, nil
 }
 
-func listFiles(ghClient *github.Client, owner string, repository string, pr github.PullRequest) ([]github.CommitFile, error) {
+func listFiles(ghClient *github.Client, owner string, repository string, pr *github.PullRequest) ([]*github.CommitFile, error) {
 	options := &github.ListOptions{
 		PerPage: 100,
 	}
-	allFiles := []github.CommitFile{}
+	allFiles := []*github.CommitFile{}
 	tries := defaultTries
 	for {
 		files, resp, err := ghClient.PullRequests.ListFiles(owner, repository, *pr.Number, options)
@@ -106,11 +106,11 @@ func listFiles(ghClient *github.Client, owner string, repository string, pr gith
 	return allFiles, nil
 }
 
-func listLabels(ghClient *github.Client, owner string, repository string, pr github.PullRequest) ([]github.Label, error) {
+func listLabels(ghClient *github.Client, owner string, repository string, pr *github.PullRequest) ([]*github.Label, error) {
 	options := &github.ListOptions{
 		PerPage: 100,
 	}
-	allLabels := []github.Label{}
+	allLabels := []*github.Label{}
 	tries := defaultTries
 	for {
 		files, resp, err := ghClient.Issues.ListLabelsByIssue(owner, repository, *pr.Number, options)
