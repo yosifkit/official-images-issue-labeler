@@ -1,4 +1,4 @@
-FROM golang:1.5
+FROM golang:1.7
 
 RUN go get -d -v \
 		github.com/google/go-github/github \
