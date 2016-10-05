@@ -18,6 +18,11 @@ type labelerFlags struct {
 	State   string `long:"state" default:"open" choice:"open" choice:"closed" choice:"all"`
 }
 
+const (
+	defaultFilePrefix   = "library/"
+	defaultNewFileLabel = "new-image"
+)
+
 func (f labelerFlags) Token() (*oauth2.Token, error) {
 	return &oauth2.Token{AccessToken: f.GhToken}, nil
 }
@@ -45,7 +50,7 @@ func main() {
 	oauthClient := oauth2.NewClient(oauthContext, opts) // https://godoc.org/golang.org/x/oauth2#NewClient
 	ghClient := github.NewClient(oauthClient)
 
-	if err := labelPullsInRepo(ghClient, opts.Owner, opts.Repo, opts.State, "library/"); err != nil {
+	if err := labelPullsInRepo(ghClient, opts.Owner, opts.Repo, opts.State, defaultFilePrefix, defaultNewFileLabel); err != nil {
 		fmt.Printf("error: %v\n", err)
 		os.Exit(1)
 	}
@@ -131,7 +136,7 @@ func listLabels(ghClient *github.Client, owner string, repository string, pr *gi
 	return allLabels, nil
 }
 
-func labelPullsInRepo(ghClient *github.Client, owner string, repository string, state string, filePrefix string) error {
+func labelPullsInRepo(ghClient *github.Client, owner string, repository string, state string, filePrefix string, newFileLabel string) error {
 	pulls, err := listPulls(ghClient, owner, repository, state)
 	if err != nil {
 		return err
@@ -153,16 +158,21 @@ NextPull:
 
 		labels := []string{}
 
-	NextFile:
 		for _, commitFile := range commitFiles {
 			if strings.HasPrefix(*commitFile.Filename, filePrefix) {
-				toAdd := *commitFile.Filename
-				for _, lbl := range currentLabels {
-					if lbl.String() == toAdd {
-						continue NextFile
-					}
+				toAdd := []string{*commitFile.Filename}
+				if commitFile.Status != nil && *commitFile.Status == "added" { // "added", "modified", etc
+					toAdd = append(toAdd, newFileLabel)
 				}
-				labels = append(labels, toAdd)
+			LabelToAdd:
+				for _, lblToAdd := range toAdd {
+					for _, lbl := range currentLabels {
+						if lbl.String() == lblToAdd {
+							continue LabelToAdd
+						}
+					}
+					labels = append(labels, lblToAdd)
+				}
 			}
 		}
 
