@@ -27,6 +27,8 @@ func (f labelerFlags) Token() (*oauth2.Token, error) {
 	return &oauth2.Token{AccessToken: f.GhToken}, nil
 }
 
+var ghContext = context.TODO()
+
 func main() {
 	opts := labelerFlags{}
 	flagParser := flags.NewParser(&opts, flags.Default)
@@ -46,8 +48,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	oauthContext := context.TODO()                      // "The returned client is not valid beyond the lifetime of the context."
-	oauthClient := oauth2.NewClient(oauthContext, opts) // https://godoc.org/golang.org/x/oauth2#NewClient
+	// "The returned client is not valid beyond the lifetime of the context."
+	oauthClient := oauth2.NewClient(ghContext, opts) // https://godoc.org/golang.org/x/oauth2#NewClient
 	ghClient := github.NewClient(oauthClient)
 
 	if err := labelPullsInRepo(ghClient, opts.Owner, opts.Repo, opts.State, defaultFilePrefix, defaultNewFileLabel); err != nil {
@@ -68,7 +70,7 @@ func listPulls(ghClient *github.Client, owner string, repository string, state s
 	allPulls := []*github.PullRequest{}
 	tries := defaultTries
 	for {
-		pulls, resp, err := ghClient.PullRequests.List(owner, repository, options)
+		pulls, resp, err := ghClient.PullRequests.List(ghContext, owner, repository, options)
 		if err != nil {
 			tries--
 			if tries <= 0 {
@@ -93,7 +95,7 @@ func listFiles(ghClient *github.Client, owner string, repository string, pr *git
 	allFiles := []*github.CommitFile{}
 	tries := defaultTries
 	for {
-		files, resp, err := ghClient.PullRequests.ListFiles(owner, repository, *pr.Number, options)
+		files, resp, err := ghClient.PullRequests.ListFiles(ghContext, owner, repository, *pr.Number, options)
 		if err != nil {
 			tries--
 			if tries <= 0 {
@@ -118,7 +120,7 @@ func listLabels(ghClient *github.Client, owner string, repository string, pr *gi
 	allLabels := []*github.Label{}
 	tries := defaultTries
 	for {
-		files, resp, err := ghClient.Issues.ListLabelsByIssue(owner, repository, *pr.Number, options)
+		files, resp, err := ghClient.Issues.ListLabelsByIssue(ghContext, owner, repository, *pr.Number, options)
 		if err != nil {
 			tries--
 			if tries <= 0 {
@@ -181,7 +183,7 @@ NextPull:
 		if len(labels) > 0 {
 			tries := defaultTries
 			for {
-				labelObjs, _, err := ghClient.Issues.AddLabelsToIssue(owner, repository, *pr.Number, labels)
+				labelObjs, _, err := ghClient.Issues.AddLabelsToIssue(ghContext, owner, repository, *pr.Number, labels)
 				if err != nil {
 					tries--
 					if tries <= 0 {
