@@ -169,7 +169,7 @@ NextPull:
 			LabelToAdd:
 				for _, lblToAdd := range toAdd {
 					for _, lbl := range currentLabels {
-						if lbl.String() == lblToAdd {
+						if *lbl.Name == lblToAdd {
 							continue LabelToAdd
 						}
 					}
