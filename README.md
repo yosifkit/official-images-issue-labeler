@@ -1,4 +1,10 @@
-# Official Images Automatic Issue Labeler [![Build Status](https://travis-ci.org/yosifkit/official-images-issue-labeler.svg?branch=master)](https://travis-ci.org/yosifkit/official-images-issue-labeler)
+## Archiving
+
+This has been replaced with a simpler GitHub action (see https://github.com/docker-library/official-images/pull/7937).
+
+---
+
+## Official Images Automatic Issue Labeler [![Build Status](https://travis-ci.org/yosifkit/official-images-issue-labeler.svg?branch=master)](https://travis-ci.org/yosifkit/official-images-issue-labeler)
 
 This is for labeling issues and PR's according to the library files they modify.
 
